@@ -1,13 +1,20 @@
 MinusEngine
 ===========
-
-A fully asynchronous C# library to access Minus API (http://min.us/pages/api).
+A fully asynchronous C# library to access [Minus API](http://min.us/pages/api).
 
 License
 -------
 The license for this project is [Apache Software License 2.0](http://www.apache.org/licenses/LICENSE-2.0.html).
 
 It means you can pretty much do whatever you want with it IF you give back some credit.
+
+Event handling
+--------------
+Every operation has two possible outputs: completion or failure.
+
+Thus, for each operation on the class MinusApi (which in turn represents a call to the actual Minus site) you have to register a success and failure delegate to handle these events.
+
+The asynchronous nature of the library makes it perfect to develop UI-based applications on top of it.
 
 Code sample
 -----------
@@ -38,4 +45,10 @@ Code sample
     // while the REAL reader id is "vgkRZC", the API requires you to put the extra "m" in there
     api.GetItems("mvgkRZC");
 
+Contact
+-------
 If you have any questions, please drop me a line on twitter [@brunodecarvalho](http://twitter.com/brunodecarvalho) or email me at bruno@biasedbit.com
+
+Dependencies
+------------
+This project uses the [Json.NET](http://json.codeplex.com/) library, by James Newton-King.
