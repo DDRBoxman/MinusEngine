@@ -8,6 +8,7 @@ namespace BiasedBit.MinusEngine
 {
     public class CreateGalleryResult
     {
+        #region Constructors
         public CreateGalleryResult()
         {
         }
@@ -18,28 +19,20 @@ namespace BiasedBit.MinusEngine
             this.ReaderId = readerId;
             this.Key = key;
         }
+        #endregion
 
+        #region Fields
         [JsonProperty("editor_id")]
-        public String EditorId
-        {
-            get;
-            set;
-        }
+        public String EditorId { get; set; }
 
         [JsonProperty("reader_id")]
-        public String ReaderId
-        {
-            get;
-            set;
-        }
+        public String ReaderId { get; set; }
 
         [JsonProperty("key")]
-        public String Key
-        {
-            get;
-            set;
-        }
+        public String Key { get; set; }
+        #endregion
 
+        #region Low level overrides
         public override string ToString()
         {
             return new StringBuilder("CreateGalleryResult{EditorId=")
@@ -50,5 +43,6 @@ namespace BiasedBit.MinusEngine
                 .Append(this.Key)
                 .Append('}').ToString();
         }
+        #endregion
     }
 }

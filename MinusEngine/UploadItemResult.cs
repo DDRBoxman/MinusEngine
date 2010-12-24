@@ -9,38 +9,35 @@ namespace BiasedBit.MinusEngine
 {
     public class UploadItemResult
     {
+        #region Constructors
         public UploadItemResult()
         {
         }
 
-        [JsonProperty("id")]
-        public String Id
+        public UploadItemResult(String id, int height, int width, String filesize)
         {
-            get;
-            set;
+            this.Id = id;
+            this.Height = height;
+            this.Width = width;
+            this.Filesize = filesize;
         }
+        #endregion
+
+        #region Fields
+        [JsonProperty("id")]
+        public String Id { get; set; }
 
         [JsonProperty("height")]
-        public int Height
-        {
-            get;
-            set;
-        }
+        public int Height { get; set; }
 
         [JsonProperty("width")]
-        public int Width
-        {
-            get;
-            set;
-        }
+        public int Width { get; set; }
 
         [JsonProperty("filesize")]
-        public String Filesize
-        {
-            get;
-            set;
-        }
+        public String Filesize { get; set; }
+        #endregion
 
+        #region Low level overrides
         public override string ToString()
         {
             return new StringBuilder("UploadItemResult{")
@@ -50,5 +47,6 @@ namespace BiasedBit.MinusEngine
                 .Append(", Filesize=").Append(this.Filesize)
                 .Append('}').ToString();
         }
+        #endregion
     }
 }

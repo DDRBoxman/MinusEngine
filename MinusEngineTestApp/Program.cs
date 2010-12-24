@@ -9,17 +9,70 @@ namespace BiasedBit.MinusEngineTestApp
 {
     class Program
     {
+        private static readonly String API_KEY = "dummyKey";
+
         static void Main(string[] args)
         {
             // This whole API is made to be completely asynchronous.
             // There are no blocking calls, hence the usage of event handling delegates.
             // Looks ugly in this console example but it's perfect for UI based applications.
-            
+
+            // Warning: The API KEY feature is still not implemented in Minus, so just pass in some "dummyKey"
+
+            // Pick one of these methods below to test the features independently
+            TestGetItems();
+            //TestAll();
+
+            // Sleep a bit so you can check the output...
+            Thread.Sleep(40000);
+        }
+
+        /// <summary>
+        /// This method
+        /// </summary>
+        private static void TestGetItems()
+        {
+            // create the API
+            MinusApi api = new MinusApi(API_KEY);
+
+            // setup the success handler for GetItems operation
+            api.GetItemsComplete += delegate(MinusApi sender, GetItemsResult result)
+            {
+                Console.WriteLine("Gallery items successfully retrieved!\n---");
+                Console.WriteLine("Read-only URL: " + result.ReadonlyUrl);
+                Console.WriteLine("Title: " + result.Title);
+                Console.WriteLine("Items:");
+                foreach (String item in result.Items)
+                {
+                    Console.WriteLine(" - " + item);
+                }
+            };
+
+            // setup the failure handler for the GetItems operation
+            api.GetItemsFailed += delegate(MinusApi sender, Exception e)
+            {
+                // don't do anything else...
+                Console.WriteLine("Failed to get items from gallery...\n" + e.Message);
+            };
+
+            // trigger the GetItems operation - notice the extra "m" in there.
+            // while the REAL reader id is "vgkRZC", the API requires you to put the extra "m" in there
+            api.GetItems("mvgkRZC");
+        }
+
+        /// <summary>
+        /// Tests the full scope of methods in the API.
+        /// This method creates a gallery, uploads a couple of items, saves them and then retrieves them.
+        /// Make sure you change the values of the items in the "items" array to match actually valid files or this
+        /// will fail.
+        /// </summary>
+        private static void TestAll()
+        {
             // The call that triggers the program is the near the end of this method
             // (the rest is pretty much setup to react to events)
 
             // create the API
-            MinusApi api = new MinusApi("dummyApiKey");
+            MinusApi api = new MinusApi(API_KEY);
 
             // Prepare the items to be uploaded
             String[] items =
@@ -80,13 +133,13 @@ namespace BiasedBit.MinusEngineTestApp
             };
             api.SaveGalleryComplete += delegate(MinusApi sender)
             {
+                // The extra "m" is appended because minus uses the first character to determine the type of data
+                // you're accessing (image, gallery, etc) and route you accordingly.
                 Console.WriteLine("Gallery saved! You can now access it at http://min.us/m" + galleryCreated.ReaderId);
             };
 
-
             // this is the call that actually triggers the whole program
             api.CreateGallery();
-            Thread.Sleep(40000); // 40 seconds should be enough...
         }
     }
 }

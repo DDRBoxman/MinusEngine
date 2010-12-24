@@ -13,16 +13,21 @@ namespace BiasedBit.MinusEngine
         Boolean IsCancelled();
     }
 
-    public class CancellableUpload : Cancellable
+    public class CancellableAsyncUpload : Cancellable
     {
+        #region Private fields
         private WebClient client;
         private Boolean cancelled;
+        #endregion
 
-        public CancellableUpload(WebClient client)
+        #region Constructors
+        public CancellableAsyncUpload(WebClient client)
         {
             this.client = client;
         }
+        #endregion
 
+        #region Public methods
         public Boolean Cancel()
         {
             lock (this)
@@ -53,5 +58,6 @@ namespace BiasedBit.MinusEngine
                 return this.cancelled;
             }
         }
+        #endregion
     }
 }

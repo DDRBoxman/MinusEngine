@@ -23,13 +23,17 @@ namespace BiasedBit.MinusEngine
     public delegate void SaveGalleryCompleteHandler(MinusApi sender);
     public delegate void SaveGalleryFailedHandler(MinusApi sender, Exception e);
 
+    public delegate void GetItemsCompleteHandler(MinusApi sender, GetItemsResult result);
+    public delegate void GetItemsFailedHandler(MinusApi sender, Exception e);
+
     public class MinusApi
     {
         #region Constants
-        public static readonly String USER_AGENT = "MinusEngine_0.1";
-        public static readonly Uri CREATE_GALLERY_URI = new Uri("http://min.us/api/CreateGallery");
-        public static readonly Uri UPLOAD_ITEM_URI = new Uri("http://min.us/api/UploadItem");
-        public static readonly Uri SAVE_GALLERY_URI = new Uri("http://min.us/api/SaveGallery");
+        public static readonly String USER_AGENT = "MinusEngine_0.2";
+        public static readonly Uri CREATE_GALLERY_URL = new Uri("http://min.us/api/CreateGallery");
+        public static readonly Uri UPLOAD_ITEM_URL = new Uri("http://min.us/api/UploadItem");
+        public static readonly Uri SAVE_GALLERY_URL = new Uri("http://min.us/api/SaveGallery");
+        public static readonly String GET_ITEMS_URL = "http://min.us/api/GetItems/";
         #endregion
 
         #region Public fields
@@ -42,26 +46,25 @@ namespace BiasedBit.MinusEngine
         public event SaveGalleryCompleteHandler SaveGalleryComplete;
         public event SaveGalleryFailedHandler SaveGalleryFailed;
 
-        public IWebProxy Proxy;
-        public String ApiKey
-        {
-            get { return this.apiKey; }
-        }
-        #endregion
+        public event GetItemsCompleteHandler GetItemsComplete;
+        public event GetItemsFailedHandler GetItemsFailed;
 
-        #region Private fields
-        private readonly String apiKey;
+        public IWebProxy Proxy { get; set; }
+        public String ApiKey { get; private set; }
         #endregion
 
         #region Constructors
         public MinusApi(String apiKey)
         {
+            // Just about as good as any other place to set this...
+            System.Net.ServicePointManager.Expect100Continue = false;
+
             if (String.IsNullOrEmpty(apiKey))
             {
                 throw new ArgumentException("API key argument cannot be null");
             }
 
-            this.apiKey = apiKey;
+            this.ApiKey = apiKey;
         }
         #endregion
 
@@ -90,7 +93,7 @@ namespace BiasedBit.MinusEngine
                 {
                     try
                     {
-                        client.DownloadStringAsync(CREATE_GALLERY_URI);
+                        client.DownloadStringAsync(CREATE_GALLERY_URL);
                     }
                     catch (WebException e)
                     {
@@ -130,14 +133,14 @@ namespace BiasedBit.MinusEngine
                 }
 
                 String response = System.Text.Encoding.UTF8.GetString(e.Result);
-                Debug.WriteLine(response);
+                Trace.WriteLine(response);
                 UploadItemResult result = JsonConvert.DeserializeObject<UploadItemResult>(response);
                 Debug.WriteLine("UploadItem operation successful: " + result);
                 this.TriggerUploadItemComplete(result);
                 client.Dispose();
             };
 
-            Cancellable cancellable = new CancellableUpload(client);
+            Cancellable cancellable = new CancellableAsyncUpload(client);
 
             try
             {
@@ -153,7 +156,7 @@ namespace BiasedBit.MinusEngine
 
                     try
                     {
-                        client.UploadFileAsync(UPLOAD_ITEM_URI, filename);
+                        client.UploadFileAsync(UPLOAD_ITEM_URL, filename);
                     }
                     catch (WebException e)
                     {
@@ -227,7 +230,7 @@ namespace BiasedBit.MinusEngine
                 {
                     try
                     {
-                        client.UploadStringAsync(SAVE_GALLERY_URI, "POST", data.ToString());
+                        client.UploadStringAsync(SAVE_GALLERY_URL, "POST", data.ToString());
                     }
                     catch (WebException e)
                     {
@@ -241,6 +244,54 @@ namespace BiasedBit.MinusEngine
             {
                 Debug.WriteLine("Failed to submit task to thread pool: " + e.Message);
                 this.TriggerSaveGalleryFailed(e);
+                client.Dispose();
+            }
+        }
+
+        public void GetItems(String galleryReaderId)
+        {
+            if (String.IsNullOrEmpty(galleryReaderId))
+            {
+                throw new ArgumentException("Gallery Reader Id cannot be null or empty");
+            }
+
+            WebClient client = this.CreateAndSetupWebClient();
+            client.DownloadStringCompleted += delegate(object sender, DownloadStringCompletedEventArgs e)
+            {
+                if (e.Error != null)
+                {
+                    Debug.WriteLine("GetItems operation failed: " + e.Error.Message);
+                    this.TriggerGetItemsFailed(e.Error);
+                    client.Dispose();
+                    return;
+                }
+
+                GetItemsResult result = JsonConvert.DeserializeObject<GetItemsResult>(e.Result);
+                Debug.WriteLine("GetItems operation successful: " + result);
+                this.TriggerGetItemsComplete(result);
+                client.Dispose();
+            };
+
+            try
+            {
+                ThreadPool.QueueUserWorkItem((object state) =>
+                {
+                    try
+                    {
+                        client.DownloadStringAsync(new Uri(GET_ITEMS_URL + galleryReaderId));
+                    }
+                    catch (WebException e)
+                    {
+                        Debug.WriteLine("Failed to access GetItems API: " + e.Message);
+                        this.TriggerGetItemsFailed(e);
+                        client.Dispose();
+                    }
+                });
+            }
+            catch (Exception e)
+            {
+                Debug.WriteLine("Failed to submit task to thread pool: " + e.Message);
+                this.TriggerGetItemsFailed(e);
                 client.Dispose();
             }
         }
@@ -296,6 +347,24 @@ namespace BiasedBit.MinusEngine
             }
         }
 
+        private void TriggerGetItemsComplete(GetItemsResult result)
+        {
+            if (this.GetItemsComplete != null)
+            {
+                this.GetItemsComplete.Invoke(this, result);
+            }
+        }
+
+        private void TriggerGetItemsFailed(Exception e)
+        {
+            if (this.GetItemsFailed != null)
+            {
+                this.GetItemsFailed.Invoke(this, e);
+            }
+        }
+        #endregion
+
+        #region Public helpers
         public static String UrlEncode(String parameter)
         {
             if (string.IsNullOrEmpty(parameter))
@@ -308,7 +377,7 @@ namespace BiasedBit.MinusEngine
             // Uri.EscapeDataString escapes with lowercase characters, convert to uppercase
             value = Regex.Replace(value, "(%[0-9a-f][0-9a-f])", c => c.Value.ToUpper());
 
-            // not escaped by Uri.EscapeDataString() but needed to be escaped
+            // not escaped by Uri.EscapeDataString() but need to be escaped
             value = value
                 .Replace("(", "%28")
                 .Replace(")", "%29")
@@ -317,7 +386,7 @@ namespace BiasedBit.MinusEngine
                 .Replace("*", "%2A")
                 .Replace("'", "%27");
 
-            // characters escaped by Uri.EscapeDataString() that needs to be sent unescaped
+            // characters escaped by Uri.EscapeDataString() that need to be sent unescaped
             value = value.Replace("%7E", "~");
 
             return value;
