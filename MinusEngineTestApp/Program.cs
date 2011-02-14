@@ -47,8 +47,6 @@ namespace BiasedBit.MinusEngineTestApp
             // create the API
             MinusApi api = new MinusApi(API_KEY);
 
-            api.SignIn("123test123", "123test123");
-
             //set up listeners for SignIn
             api.SignInFailed += delegate(MinusApi sender, Exception e)
             {
@@ -57,7 +55,24 @@ namespace BiasedBit.MinusEngineTestApp
             api.SignInComplete += delegate(MinusApi sender, SignInResult result)
             {
                 Console.WriteLine("Signed In: " + result.Success + ", " + result.CookieHeaders);
+                api.MyGalleries(result.CookieHeaders);
             };
+
+            //set up listeners for MyGalleries
+            api.MyGalleriesFailed += delegate(MinusApi sender, Exception e)
+            {
+                Console.WriteLine("Failed to get galleries..." + e.Message);
+            };
+            api.MyGalleriesComplete += delegate(MinusApi sender, MyGalleriesResult result)
+            {
+                Console.WriteLine("Got galleries...");
+                foreach (GalleryResult gallery in result.Galleries)
+                {
+                    Console.WriteLine(gallery.Name + " - " + gallery.LastVisit);
+                }
+            };
+
+            api.SignIn("123test123", "123test123");
         }
 
         /// <summary>

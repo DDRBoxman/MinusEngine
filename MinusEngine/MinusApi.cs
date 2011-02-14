@@ -44,6 +44,9 @@ namespace BiasedBit.MinusEngine
     public delegate void SignInCompleteHandler(MinusApi sender, SignInResult result);
     public delegate void SignInFailedHandler(MinusApi sender, Exception e);
 
+    public delegate void MyGalleriesCompleteHandler(MinusApi sender, MyGalleriesResult result);
+    public delegate void MyGalleriesFailedHandler(MinusApi sender, Exception e);
+
     public class MinusApi
     {
         #region Constants
@@ -54,6 +57,7 @@ namespace BiasedBit.MinusEngine
         public static readonly Uri SAVE_GALLERY_URL = new Uri(BASE_URL + "SaveGallery");
         public static readonly String GET_ITEMS_URL = BASE_URL + "GetItems/";
         public static readonly Uri SIGN_IN_URL = new Uri(BASE_URL + "SignIn");
+        public static readonly Uri MY_GALLERIES_URL = new Uri(BASE_URL + "MyGalleries.json");
         #endregion
 
         #region Public fields
@@ -71,6 +75,9 @@ namespace BiasedBit.MinusEngine
 
         public event SignInCompleteHandler SignInComplete;
         public event SignInFailedHandler SignInFailed;
+
+        public event MyGalleriesCompleteHandler MyGalleriesComplete;
+        public event MyGalleriesFailedHandler MyGalleriesFailed;
 
         public IWebProxy Proxy { get; set; }
         public String ApiKey { get; private set; }
@@ -96,12 +103,27 @@ namespace BiasedBit.MinusEngine
         #endregion
 
         #region Public methods
+
         /// <summary>
         /// Creates an empty new gallery.
         /// </summary>
         public void CreateGallery()
         {
-            WebClient client = this.CreateAndSetupWebClient();
+            CreateGallery(null);
+        }
+
+        /// <summary>
+        /// Creates an empty new gallery.
+        /// </summary>
+        public void CreateGallery(String cookieHeader)
+        {
+
+            CookieAwareWebClient client = this.CreateAndSetupWebClient();
+            if (!String.IsNullOrEmpty(cookieHeader))
+            {
+                client.setCookieHeader(new Uri(BASE_URL), cookieHeader);
+            }
+
             client.DownloadStringCompleted += delegate(object sender, DownloadStringCompletedEventArgs e) {
                 if (e.Error != null)
                 {
@@ -418,6 +440,58 @@ namespace BiasedBit.MinusEngine
             }
         }
 
+        /// <summary>
+        /// Retrieve all of a users galleries
+        /// </summary>
+        /// <param name="cookieHeader">A String representation of the session id cookie</param>
+        public void MyGalleries(String cookieHeader)
+        {
+            if (String.IsNullOrEmpty(cookieHeader))
+            {
+                throw new ArgumentException("Cookie Header cannot be null or empty");
+            }
+
+            CookieAwareWebClient client = this.CreateAndSetupWebClient();
+            client.setCookieHeader(new Uri(BASE_URL), cookieHeader);
+            client.DownloadStringCompleted += delegate(object sender, DownloadStringCompletedEventArgs e)
+            {
+                if (e.Error != null)
+                {
+                    Debug.WriteLine("MyGalleries operation failed: " + e.Error.Message);
+                    this.TriggerGetItemsFailed(e.Error);
+                    client.Dispose();
+                    return;
+                }
+
+                MyGalleriesResult result = JsonConvert.DeserializeObject<MyGalleriesResult>(e.Result);
+                Debug.WriteLine("MyGalleries operation successful: " + result);
+                this.TriggerMyGalleriesComplete(result);
+                client.Dispose();
+            };
+
+            try
+            {
+                ThreadPool.QueueUserWorkItem((object state) =>
+                {
+                    try
+                    {
+                        client.DownloadStringAsync(MY_GALLERIES_URL);
+                    }
+                    catch (WebException e)
+                    {
+                        Debug.WriteLine("Failed to access MyGalleries API: " + e.Message);
+                        this.TriggerGetItemsFailed(e);
+                        client.Dispose();
+                    }
+                });
+            }
+            catch (Exception e)
+            {
+                Debug.WriteLine("Failed to submit task to thread pool: " + e.Message);
+                this.TriggerGetItemsFailed(e);
+                client.Dispose();
+            }
+        }
         #endregion
 
         #region Public helpers
@@ -546,6 +620,22 @@ namespace BiasedBit.MinusEngine
             if (this.SignInFailed != null)
             {
                 this.SignInFailed.Invoke(this, e);
+            }
+        }
+
+        private void TriggerMyGalleriesComplete(MyGalleriesResult result)
+        {
+            if (this.MyGalleriesComplete != null)
+            {
+                this.MyGalleriesComplete.Invoke(this, result);
+            }
+        }
+
+        private void TriggerMyGalleriesFailed(Exception e)
+        {
+            if (this.MyGalleriesFailed != null)
+            {
+                this.MyGalleriesFailed.Invoke(this, e);
             }
         }
         #endregion
