@@ -45,10 +45,11 @@ namespace BiasedBit.MinusEngine
     {
         #region Constants
         public static readonly String USER_AGENT = "MinusEngine_0.2";
-        public static readonly Uri CREATE_GALLERY_URL = new Uri("http://min.us/api/CreateGallery");
-        public static readonly Uri UPLOAD_ITEM_URL = new Uri("http://min.us/api/UploadItem");
-        public static readonly Uri SAVE_GALLERY_URL = new Uri("http://min.us/api/SaveGallery");
-        public static readonly String GET_ITEMS_URL = "http://min.us/api/GetItems/";
+        public static readonly String BASE_URL = "http://204.236.229.205/api/";
+        public static readonly Uri CREATE_GALLERY_URL = new Uri(BASE_URL + "CreateGallery");
+        public static readonly Uri UPLOAD_ITEM_URL = new Uri(BASE_URL + "UploadItem");
+        public static readonly Uri SAVE_GALLERY_URL = new Uri(BASE_URL + "SaveGallery");
+        public static readonly String GET_ITEMS_URL = BASE_URL + "GetItems/";
         #endregion
 
         #region Public fields
@@ -237,12 +238,7 @@ namespace BiasedBit.MinusEngine
             WebClient client = this.CreateAndSetupWebClient();
 
             // build the item list (the order in which the items will be shown)
-            StringBuilder builder = new StringBuilder().Append('[');
-            for (int i = 0; i < items.Length; i++)
-            {
-                builder.Append("'").Append(items[i]).Append("',");
-            }
-            builder.Remove(builder.Length - 1, 1).Append(']');
+            string jsonItems = JsonConvert.SerializeObject(items);
 
             // Add the post data - must be as a string because WebClient doesn't do UrlEncode on all the
             // characters it's supposed to do. If I do UrlEncode() before submitting the webclient will
@@ -251,7 +247,7 @@ namespace BiasedBit.MinusEngine
             data.Append("name=").Append(name)
             .Append("&id=").Append(galleryEditorId)
             .Append("&key=").Append(key)
-            .Append("&items=").Append(UrlEncode(builder.ToString()));
+            .Append("&items=").Append(UrlEncode(jsonItems));
 
             client.Headers["Content-Type"] = "application/x-www-form-urlencoded";
 
