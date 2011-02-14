@@ -34,9 +34,9 @@ namespace BiasedBit.MinusEngineTestApp
             // Warning: The API KEY feature is still not implemented in Minus, so just pass in some "dummyKey"
 
             // Pick one of these methods below to test the features independently
-            TestAuth();
+            //TestAuth();
             //TestGetItems();
-            //TestAll();
+            TestAll();
 
             // Sleep a bit so you can check the output...
             Thread.Sleep(40000);

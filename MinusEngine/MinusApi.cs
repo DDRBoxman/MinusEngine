@@ -196,81 +196,59 @@ namespace BiasedBit.MinusEngine
         /// some time to complete, you can call cancel() on the returned Cancellable to
         /// abort this operation.
         /// </returns>
-        public Cancellable UploadItem(String editorId, String key, String filename, String desiredFilename = null)
+#if !WINDOWS_PHONE
+        public void UploadItem(String editorId, String key, String filename, String desiredFilename = null)
         {
             // Not worth checking for file existence or other stuff, as either Path.GetFileName or the upload
             // will check & fail
             String name = desiredFilename == null ? Path.GetFileName(filename) : desiredFilename;
+            Stream data = new FileStream(filename, FileMode.Open, FileAccess.Read);
+            UploadItem(editorId, key, name, data);
+        }
+#endif
 
-            WebClient client = this.CreateAndSetupWebClient();
-            client.QueryString.Add("editor_id", editorId);
-            client.QueryString.Add("key", key);
-            client.QueryString.Add("filename", UrlEncode(name));
+        public void UploadItem(String editorId, String key, String filename, Stream data)
+        {
+            UriBuilder ub = new UriBuilder(UPLOAD_ITEM_URL);
+            ub.Query = string.Format("filename={0}&key={1}&editor_id={2}", filename, key, editorId);
 
-            client.UploadFileCompleted += delegate(object sender, UploadFileCompletedEventArgs e)
-            {
-                if (e.Error != null)
-                {
-                    Debug.WriteLine("UploadItem operation failed: " + e.Error.Message);
-                    this.TriggerUploadItemFailed(e.Error);
-                    #if !WINDOWS_PHONE
-                        client.Dispose();
-                    #endif
-                    return;
-                }
-
-                String response = System.Text.Encoding.UTF8.GetString(e.Result);
-                #if !WINDOWS_PHONE
-                    Trace.WriteLine(response);
-                #endif
-                UploadItemResult result = JsonConvert.DeserializeObject<UploadItemResult>(response);
-                Debug.WriteLine("UploadItem operation successful: " + result);
-                this.TriggerUploadItemComplete(result);
-                #if !WINDOWS_PHONE
-                    client.Dispose();
-                #endif
-            };
-
-            Cancellable cancellable = new CancellableAsyncUpload(client);
+            HttpWebRequest request = (HttpWebRequest)WebRequest.Create(ub.Uri);
+            request.Method = "POST";
 
             try
             {
                 ThreadPool.QueueUserWorkItem((object state) =>
                 {
-                    if (cancellable.IsCancelled())
-                    {
-                        Debug.WriteLine("Upload already cancelled!");
-                        this.TriggerUploadItemFailed(new OperationCanceledException("Cancelled by request"));
-                        #if !WINDOWS_PHONE
-                            client.Dispose();
-                        #endif
-                        return;
-                    }
 
-                    try
+                    request.BeginGetRequestStream(delegate(IAsyncResult result)
                     {
-                        client.UploadFileAsync(UPLOAD_ITEM_URL, filename);
-                    }
-                    catch (WebException e)
-                    {
-                        Debug.WriteLine("Failed to access UploadItem API: " + e.Message);
-                        this.TriggerUploadItemFailed(e);
-                        #if !WINDOWS_PHONE
-                            client.Dispose();
-                        #endif
-                    }
+                        HttpWebRequest reqstate = (HttpWebRequest)result.AsyncState;
+
+                        Stream postStream = reqstate.EndGetRequestStream(result);
+                        PushData(data, postStream);
+                        postStream.Close();
+
+                        reqstate.BeginGetResponse(delegate(IAsyncResult result2)
+                        {
+                            WebResponse response = ((HttpWebRequest)result2.AsyncState).EndGetResponse(result2);
+                            StreamReader reader = new StreamReader(response.GetResponseStream());
+                            string responseString = reader.ReadToEnd();
+                            reader.Close();
+                            response.Close();
+                            UploadItemResult resultItems = JsonConvert.DeserializeObject<UploadItemResult>(responseString);
+                            Debug.WriteLine("UploadItem operation successful: " + resultItems);
+                            this.TriggerUploadItemComplete(resultItems);
+                        }
+                            , reqstate);
+                        
+                    }, request);
                 });
             }
             catch (Exception e)
             {
                 Debug.WriteLine("Failed to submit task to thread pool: " + e.Message);
                 this.TriggerUploadItemFailed(e);
-                #if !WINDOWS_PHONE
-                    client.Dispose();
-                #endif
             }
-
-            return cancellable;
         }
 
         /// <summary>
@@ -598,6 +576,18 @@ namespace BiasedBit.MinusEngine
             client.Headers["User-Agent"] = USER_AGENT;
             return client;
         }
+
+        private void PushData(Stream input, Stream output)
+        {
+            byte[] buffer = new byte[4096];
+            int bytesRead;
+
+            while ((bytesRead = input.Read(buffer, 0, buffer.Length)) != 0)
+            {
+                output.Write(buffer, 0, bytesRead);
+            }
+        }
+
         #endregion
 
         #region Event Triggering
