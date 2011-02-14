@@ -41,6 +41,9 @@ namespace BiasedBit.MinusEngine
     public delegate void GetItemsCompleteHandler(MinusApi sender, GetItemsResult result);
     public delegate void GetItemsFailedHandler(MinusApi sender, Exception e);
 
+    public delegate void SignInCompleteHandler(MinusApi sender, SignInResult result);
+    public delegate void SignInFailedHandler(MinusApi sender, Exception e);
+
     public class MinusApi
     {
         #region Constants
@@ -50,6 +53,7 @@ namespace BiasedBit.MinusEngine
         public static readonly Uri UPLOAD_ITEM_URL = new Uri(BASE_URL + "UploadItem");
         public static readonly Uri SAVE_GALLERY_URL = new Uri(BASE_URL + "SaveGallery");
         public static readonly String GET_ITEMS_URL = BASE_URL + "GetItems/";
+        public static readonly Uri SIGN_IN_URL = new Uri(BASE_URL + "SignIn");
         #endregion
 
         #region Public fields
@@ -64,6 +68,9 @@ namespace BiasedBit.MinusEngine
 
         public event GetItemsCompleteHandler GetItemsComplete;
         public event GetItemsFailedHandler GetItemsFailed;
+
+        public event SignInCompleteHandler SignInComplete;
+        public event SignInFailedHandler SignInFailed;
 
         public IWebProxy Proxy { get; set; }
         public String ApiKey { get; private set; }
@@ -344,6 +351,73 @@ namespace BiasedBit.MinusEngine
             }
         }
 
+        /// <summary>
+        /// Signs into minus
+        /// </summary>
+        /// <param name="username">Username to sign in with.</param>
+        /// <param name="password">Password to sign in with</param>
+        /// </param>
+        public void SignIn(String username, String password)
+        {
+            // Get a pre-configured web client
+            CookieAwareWebClient client = this.CreateAndSetupWebClient();
+
+            StringBuilder data = new StringBuilder();
+            data.Append("username=").Append(username)
+            .Append("&password1=").Append(password);
+
+            client.Headers["Content-Type"] = "application/x-www-form-urlencoded";
+
+            // register the completion/error listener
+            client.UploadStringCompleted += delegate(object sender, UploadStringCompletedEventArgs e)
+            {
+                if (e.Error != null)
+                {
+                    Debug.WriteLine("SignIn operation failed: " + e.Error.Message);
+                    this.TriggerSignInFailed(e.Error);
+                    client.Dispose();
+                    return;
+                }
+
+                SignInResult result = JsonConvert.DeserializeObject<SignInResult>(e.Result);
+                Debug.WriteLine("SignIn operation successful: " + result);
+                if (result.Success)
+                {
+                    result.CookieHeaders = client.getCookieHeader(new Uri(BASE_URL));
+                    this.TriggerSignInComplete(result);
+                }
+                else
+                {
+                    this.TriggerSignInFailed(new Exception("Incorrect credentials"));
+                }
+                client.Dispose();
+            };
+
+            // submit as an asynchronous task
+            try
+            {
+                ThreadPool.QueueUserWorkItem((object state) =>
+                {
+                    try
+                    {
+                        client.UploadStringAsync(SIGN_IN_URL, "POST", data.ToString());
+                    }
+                    catch (WebException e)
+                    {
+                        Debug.WriteLine("Failed to access SignIn API: " + e.Message);
+                        this.TriggerSignInFailed(e);
+                        client.Dispose();
+                    }
+                });
+            }
+            catch (Exception e)
+            {
+                Debug.WriteLine("Failed to submit task to thread pool: " + e.Message);
+                this.TriggerSignInFailed(e);
+                client.Dispose();
+            }
+        }
+
         #endregion
 
         #region Public helpers
@@ -382,9 +456,9 @@ namespace BiasedBit.MinusEngine
 
         #region Private helpers
 
-        private WebClient CreateAndSetupWebClient()
+        private CookieAwareWebClient CreateAndSetupWebClient()
         {
-            WebClient client = new WebClient();
+            CookieAwareWebClient client = new CookieAwareWebClient();
             if (this.Proxy != null)
             {
                 client.Proxy = this.Proxy;
@@ -456,6 +530,22 @@ namespace BiasedBit.MinusEngine
             if (this.GetItemsFailed != null)
             {
                 this.GetItemsFailed.Invoke(this, e);
+            }
+        }
+
+        private void TriggerSignInComplete(SignInResult result)
+        {
+            if (this.SignInComplete != null)
+            {
+                this.SignInComplete.Invoke(this, result);
+            }
+        }
+
+        private void TriggerSignInFailed(Exception e)
+        {
+            if (this.SignInFailed != null)
+            {
+                this.SignInFailed.Invoke(this, e);
             }
         }
         #endregion

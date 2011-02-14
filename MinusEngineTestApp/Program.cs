@@ -34,11 +34,30 @@ namespace BiasedBit.MinusEngineTestApp
             // Warning: The API KEY feature is still not implemented in Minus, so just pass in some "dummyKey"
 
             // Pick one of these methods below to test the features independently
+            TestAuth();
             //TestGetItems();
-            TestAll();
+            //TestAll();
 
             // Sleep a bit so you can check the output...
             Thread.Sleep(40000);
+        }
+
+        private static void TestAuth()
+        {
+            // create the API
+            MinusApi api = new MinusApi(API_KEY);
+
+            api.SignIn("123test123", "123test123");
+
+            //set up listeners for SignIn
+            api.SignInFailed += delegate(MinusApi sender, Exception e)
+            {
+                Console.WriteLine("Failed to Sign In... " + e.Message);
+            };
+            api.SignInComplete += delegate(MinusApi sender, SignInResult result)
+            {
+                Console.WriteLine("Signed In: " + result.Success + ", " + result.CookieHeaders);
+            };
         }
 
         /// <summary>
@@ -150,6 +169,17 @@ namespace BiasedBit.MinusEngineTestApp
                 // The extra "m" is appended because minus uses the first character to determine the type of data
                 // you're accessing (image, gallery, etc) and route you accordingly.
                 Console.WriteLine("Gallery saved! You can now access it at http://min.us/m" + galleryCreated.ReaderId);
+                api.SignIn("123test123", "123test123");
+            };
+
+            //set up listeners for SignIn
+            api.SignInFailed += delegate(MinusApi sender, Exception e)
+            {
+                Console.WriteLine("Failed to Sign In... " + e.Message);
+            };
+            api.SignInComplete += delegate(MinusApi sender, SignInResult result)
+            {
+                Console.WriteLine("Signed In: " + result.Success);
             };
 
             // this is the call that actually triggers the whole program
