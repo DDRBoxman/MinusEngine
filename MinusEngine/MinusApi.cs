@@ -79,7 +79,10 @@ namespace BiasedBit.MinusEngine
         public event MyGalleriesCompleteHandler MyGalleriesComplete;
         public event MyGalleriesFailedHandler MyGalleriesFailed;
 
-        public IWebProxy Proxy { get; set; }
+        #if !WINDOWS_PHONE
+            public IWebProxy Proxy { get; set; }
+        #endif
+
         public String ApiKey { get; private set; }
         #endregion
 
@@ -90,9 +93,10 @@ namespace BiasedBit.MinusEngine
         /// <param name="apiKey">The API Key assigned to your application.</param>
         public MinusApi(String apiKey)
         {
-            // Just about as good as any other place to set this...
-            System.Net.ServicePointManager.Expect100Continue = false;
-
+            #if !WINDOWS_PHONE
+                // Just about as good as any other place to set this...
+                System.Net.ServicePointManager.Expect100Continue = false;
+            #endif
             if (String.IsNullOrEmpty(apiKey))
             {
                 throw new ArgumentException("API key argument cannot be null");
@@ -129,14 +133,18 @@ namespace BiasedBit.MinusEngine
                 {
                     Debug.WriteLine("CreateGallery operation failed: " + e.Error.Message);
                     this.TriggerCreateGalleryFailed(e.Error);
-                    client.Dispose();
+                    #if !WINDOWS_PHONE
+                        client.Dispose();
+                    #endif
                     return;
                 }
 
                 CreateGalleryResult result = JsonConvert.DeserializeObject<CreateGalleryResult>(e.Result);
                 Debug.WriteLine("CreateGallery operation successful: " + result);
                 this.TriggerCreateGalleryComplete(result);
-                client.Dispose();
+                #if !WINDOWS_PHONE
+                    client.Dispose();
+                #endif
             };
 
             try
@@ -151,7 +159,9 @@ namespace BiasedBit.MinusEngine
                     {
                         Debug.WriteLine("Failed to access CreateGallery API: " + e.Message);
                         this.TriggerCreateGalleryFailed(e);
-                        client.Dispose();
+                        #if !WINDOWS_PHONE
+                            client.Dispose();
+                        #endif
                     }
                 });
             }
@@ -159,7 +169,9 @@ namespace BiasedBit.MinusEngine
             {
                 Debug.WriteLine("Failed to submit task to thread pool: " + e.Message);
                 this.TriggerCreateGalleryFailed(e);
-                client.Dispose();
+                #if !WINDOWS_PHONE
+                    client.Dispose();
+                #endif
             }
         }
 
@@ -201,16 +213,22 @@ namespace BiasedBit.MinusEngine
                 {
                     Debug.WriteLine("UploadItem operation failed: " + e.Error.Message);
                     this.TriggerUploadItemFailed(e.Error);
-                    client.Dispose();
+                    #if !WINDOWS_PHONE
+                        client.Dispose();
+                    #endif
                     return;
                 }
 
                 String response = System.Text.Encoding.UTF8.GetString(e.Result);
-                Trace.WriteLine(response);
+                #if !WINDOWS_PHONE
+                    Trace.WriteLine(response);
+                #endif
                 UploadItemResult result = JsonConvert.DeserializeObject<UploadItemResult>(response);
                 Debug.WriteLine("UploadItem operation successful: " + result);
                 this.TriggerUploadItemComplete(result);
-                client.Dispose();
+                #if !WINDOWS_PHONE
+                    client.Dispose();
+                #endif
             };
 
             Cancellable cancellable = new CancellableAsyncUpload(client);
@@ -223,7 +241,9 @@ namespace BiasedBit.MinusEngine
                     {
                         Debug.WriteLine("Upload already cancelled!");
                         this.TriggerUploadItemFailed(new OperationCanceledException("Cancelled by request"));
-                        client.Dispose();
+                        #if !WINDOWS_PHONE
+                            client.Dispose();
+                        #endif
                         return;
                     }
 
@@ -235,7 +255,9 @@ namespace BiasedBit.MinusEngine
                     {
                         Debug.WriteLine("Failed to access UploadItem API: " + e.Message);
                         this.TriggerUploadItemFailed(e);
-                        client.Dispose();
+                        #if !WINDOWS_PHONE
+                            client.Dispose();
+                        #endif
                     }
                 });
             }
@@ -243,7 +265,9 @@ namespace BiasedBit.MinusEngine
             {
                 Debug.WriteLine("Failed to submit task to thread pool: " + e.Message);
                 this.TriggerUploadItemFailed(e);
-                client.Dispose();
+                #if !WINDOWS_PHONE
+                    client.Dispose();
+                #endif
             }
 
             return cancellable;
@@ -287,13 +311,17 @@ namespace BiasedBit.MinusEngine
                 {
                     Debug.WriteLine("SaveGallery operation failed: " + e.Error.Message);
                     this.TriggerUploadItemFailed(e.Error);
-                    client.Dispose();
+                    #if !WINDOWS_PHONE
+                        client.Dispose();
+                    #endif
                     return;
                 }
 
                 Debug.WriteLine("SaveGallery operation successful.");
                 this.TriggerSaveGalleryComplete();
-                client.Dispose();
+                #if !WINDOWS_PHONE
+                    client.Dispose();
+                #endif
             };
 
             // submit as an asynchronous task
@@ -309,7 +337,9 @@ namespace BiasedBit.MinusEngine
                     {
                         Debug.WriteLine("Failed to access SaveGallery API: " + e.Message);
                         this.TriggerSaveGalleryFailed(e);
-                        client.Dispose();
+                        #if !WINDOWS_PHONE
+                            client.Dispose();
+                        #endif
                     }
                 });
             }
@@ -317,7 +347,9 @@ namespace BiasedBit.MinusEngine
             {
                 Debug.WriteLine("Failed to submit task to thread pool: " + e.Message);
                 this.TriggerSaveGalleryFailed(e);
-                client.Dispose();
+                #if !WINDOWS_PHONE
+                    client.Dispose();
+                #endif      
             }
         }
 
@@ -339,14 +371,18 @@ namespace BiasedBit.MinusEngine
                 {
                     Debug.WriteLine("GetItems operation failed: " + e.Error.Message);
                     this.TriggerGetItemsFailed(e.Error);
-                    client.Dispose();
+                    #if !WINDOWS_PHONE
+                        client.Dispose();
+                    #endif
                     return;
                 }
 
                 GetItemsResult result = JsonConvert.DeserializeObject<GetItemsResult>(e.Result);
                 Debug.WriteLine("GetItems operation successful: " + result);
                 this.TriggerGetItemsComplete(result);
-                client.Dispose();
+                #if !WINDOWS_PHONE
+                    client.Dispose();
+                #endif
             };
 
             try
@@ -361,7 +397,9 @@ namespace BiasedBit.MinusEngine
                     {
                         Debug.WriteLine("Failed to access GetItems API: " + e.Message);
                         this.TriggerGetItemsFailed(e);
-                        client.Dispose();
+                        #if !WINDOWS_PHONE
+                            client.Dispose();
+                        #endif
                     }
                 });
             }
@@ -369,7 +407,9 @@ namespace BiasedBit.MinusEngine
             {
                 Debug.WriteLine("Failed to submit task to thread pool: " + e.Message);
                 this.TriggerGetItemsFailed(e);
-                client.Dispose();
+                #if !WINDOWS_PHONE
+                    client.Dispose();
+                #endif
             }
         }
 
@@ -397,7 +437,9 @@ namespace BiasedBit.MinusEngine
                 {
                     Debug.WriteLine("SignIn operation failed: " + e.Error.Message);
                     this.TriggerSignInFailed(e.Error);
-                    client.Dispose();
+                    #if !WINDOWS_PHONE
+                        client.Dispose();
+                    #endif
                     return;
                 }
 
@@ -412,7 +454,9 @@ namespace BiasedBit.MinusEngine
                 {
                     this.TriggerSignInFailed(new Exception("Incorrect credentials"));
                 }
-                client.Dispose();
+                #if !WINDOWS_PHONE
+                    client.Dispose();
+                #endif
             };
 
             // submit as an asynchronous task
@@ -428,7 +472,9 @@ namespace BiasedBit.MinusEngine
                     {
                         Debug.WriteLine("Failed to access SignIn API: " + e.Message);
                         this.TriggerSignInFailed(e);
-                        client.Dispose();
+                        #if !WINDOWS_PHONE
+                            client.Dispose();
+                        #endif
                     }
                 });
             }
@@ -436,7 +482,9 @@ namespace BiasedBit.MinusEngine
             {
                 Debug.WriteLine("Failed to submit task to thread pool: " + e.Message);
                 this.TriggerSignInFailed(e);
-                client.Dispose();
+                #if !WINDOWS_PHONE
+                    client.Dispose();
+                #endif
             }
         }
 
@@ -459,14 +507,18 @@ namespace BiasedBit.MinusEngine
                 {
                     Debug.WriteLine("MyGalleries operation failed: " + e.Error.Message);
                     this.TriggerGetItemsFailed(e.Error);
-                    client.Dispose();
+                    #if !WINDOWS_PHONE
+                        client.Dispose();
+                    #endif
                     return;
                 }
 
                 MyGalleriesResult result = JsonConvert.DeserializeObject<MyGalleriesResult>(e.Result);
                 Debug.WriteLine("MyGalleries operation successful: " + result);
                 this.TriggerMyGalleriesComplete(result);
-                client.Dispose();
+                #if !WINDOWS_PHONE
+                    client.Dispose();
+                #endif
             };
 
             try
@@ -481,7 +533,9 @@ namespace BiasedBit.MinusEngine
                     {
                         Debug.WriteLine("Failed to access MyGalleries API: " + e.Message);
                         this.TriggerGetItemsFailed(e);
-                        client.Dispose();
+                        #if !WINDOWS_PHONE
+                            client.Dispose();
+                        #endif
                     }
                 });
             }
@@ -489,7 +543,9 @@ namespace BiasedBit.MinusEngine
             {
                 Debug.WriteLine("Failed to submit task to thread pool: " + e.Message);
                 this.TriggerGetItemsFailed(e);
-                client.Dispose();
+                #if !WINDOWS_PHONE
+                    client.Dispose();
+                #endif
             }
         }
         #endregion
@@ -533,10 +589,12 @@ namespace BiasedBit.MinusEngine
         private CookieAwareWebClient CreateAndSetupWebClient()
         {
             CookieAwareWebClient client = new CookieAwareWebClient();
-            if (this.Proxy != null)
-            {
-                client.Proxy = this.Proxy;
-            }
+            #if !WINDOWS_PHONE
+                if (this.Proxy != null)
+                {
+                    client.Proxy = this.Proxy;
+                }
+            #endif
             client.Headers["User-Agent"] = USER_AGENT;
             return client;
         }
