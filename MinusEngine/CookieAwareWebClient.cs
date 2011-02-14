@@ -10,6 +10,12 @@ namespace BiasedBit.MinusEngine
     public class CookieAwareWebClient : WebClient
     {
 
+        [System.Security.SecuritySafeCritical]
+        public CookieAwareWebClient()
+            : base()
+        {
+        }
+
         private CookieContainer m_container = new CookieContainer();
 
         protected override WebRequest GetWebRequest(Uri address)

@@ -6,7 +6,7 @@ using System.Runtime.InteropServices;
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
 [assembly: AssemblyTitle("MinusEngine_WP7")]
-[assembly: AssemblyDescription("")]
+[assembly: AssemblyDescription("And API to allow WP7 to talk to min.us")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("Microsoft")]
 [assembly: AssemblyProduct("MinusEngine_WP7")]
