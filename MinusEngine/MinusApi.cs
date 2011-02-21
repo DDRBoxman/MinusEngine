@@ -268,8 +268,17 @@ namespace BiasedBit.MinusEngine
             // Get a pre-configured web client
             WebClient client = this.CreateAndSetupWebClient();
 
+            string jsonItems;
+
             // build the item list (the order in which the items will be shown)
-            string jsonItems = JsonConvert.SerializeObject(items);
+            if (items != null && items.Count() > 0)
+            {
+                jsonItems = JsonConvert.SerializeObject(items);
+            }
+            else
+            {
+                jsonItems = "[]";
+            }
 
             // Add the post data - must be as a string because WebClient doesn't do UrlEncode on all the
             // characters it's supposed to do. If I do UrlEncode() before submitting the webclient will
@@ -484,6 +493,8 @@ namespace BiasedBit.MinusEngine
                 if (e.Error != null)
                 {
                     Debug.WriteLine("MyGalleries operation failed: " + e.Error.Message);
+                    Debug.WriteLine("MyGalleries operation failed: " + e.Error.InnerException);
+                    Debug.WriteLine("MyGalleries operation failed: " + e.Error.Data);
                     this.TriggerGetItemsFailed(e.Error);
                     #if !WINDOWS_PHONE
                         client.Dispose();
