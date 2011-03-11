@@ -212,11 +212,11 @@ namespace BiasedBit.MinusEngine
             UriBuilder ub = new UriBuilder(UPLOAD_ITEM_URL);
             ub.Query = string.Format("filename={0}&key={1}&editor_id={2}", filename, key, editorId);
 
-            HttpWebRequest request = (HttpWebRequest)WebRequest.Create(ub.Uri);
-            request.Method = "POST";
-
             try
             {
+                HttpWebRequest request = (HttpWebRequest)WebRequest.Create(ub.Uri);
+                request.Method = "POST";
+
                 ThreadPool.QueueUserWorkItem((object state) =>
                 {
 
@@ -230,14 +230,23 @@ namespace BiasedBit.MinusEngine
 
                         reqstate.BeginGetResponse(delegate(IAsyncResult result2)
                         {
-                            WebResponse response = ((HttpWebRequest)result2.AsyncState).EndGetResponse(result2);
-                            StreamReader reader = new StreamReader(response.GetResponseStream());
-                            string responseString = reader.ReadToEnd();
-                            reader.Close();
-                            response.Close();
-                            UploadItemResult resultItems = JsonConvert.DeserializeObject<UploadItemResult>(responseString);
-                            Debug.WriteLine("UploadItem operation successful: " + resultItems);
-                            this.TriggerUploadItemComplete(resultItems);
+                            try
+                            {
+                                WebResponse response = ((HttpWebRequest)result2.AsyncState).EndGetResponse(result2);
+                                StreamReader reader = new StreamReader(response.GetResponseStream());
+                                string responseString = reader.ReadToEnd();
+                                reader.Close();
+                                response.Close();
+                                UploadItemResult resultItems = JsonConvert.DeserializeObject<UploadItemResult>(responseString);
+                                Debug.WriteLine("UploadItem operation successful: " + resultItems);
+                                this.TriggerUploadItemComplete(resultItems);
+                            }
+                            catch (Exception e)
+                            {
+                                Debug.WriteLine("Upload Failed" + e.Message);
+                                this.TriggerUploadItemFailed(e);
+                            }
+                            
                         }
                             , reqstate);
                         
